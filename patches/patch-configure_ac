@@ -1,0 +1,55 @@
+$OpenBSD$
+--- configure.ac.orig	Tue Jun 30 08:53:59 2015
++++ configure.ac	Thu Jul 16 07:11:20 2015
+@@ -174,11 +174,12 @@ dnl are also linux specific.  The "network" and storag
+ dnl to not work on MacOS X presently, so we also make a note if compiling
+ dnl for that
+ 
+-with_linux=no with_osx=no with_freebsd=no
++with_linux=no with_osx=no with_freebsd=no with_openbsd=no
+ case $host in
+   *-*-linux*) with_linux=yes ;;
+   *-*-darwin*) with_osx=yes ;;
+   *-*-freebsd*) with_freebsd=yes ;;
++  *-*-openbsd*) with_openbsd=yes ;;
+   *-*-mingw* | *-*-msvc* ) with_win=yes ;;
+ esac
+ 
+@@ -190,7 +191,7 @@ if test $with_linux = no; then
+     with_dtrace=no
+ fi
+ 
+-if test $with_freebsd = yes; then
++if test $with_freebsd = yes || test $with_openbsd = yes; then
+    want_ifconfig=yes
+ 
+    with_firewalld=no
+@@ -198,6 +199,7 @@ fi
+ 
+ AM_CONDITIONAL([WITH_LINUX], [test "$with_linux" = "yes"])
+ AM_CONDITIONAL([WITH_FREEBSD], [test "$with_freebsd" = "yes"])
++AM_CONDITIONAL([WITH_OPENBSD], [test "$with_openbsd" = "yes"])
+ 
+ # We don't support the daemon yet
+ if test "$with_win" = "yes" ; then
+@@ -2506,7 +2508,7 @@ fi
+ AM_CONDITIONAL([WITH_INTERFACE], [test "$with_interface" = "yes"])
+ 
+ 
+-if test $with_freebsd = yes || test $with_osx = yes; then
++if test $with_freebsd = yes || test $with_osx = yes || test $with_openbsd = yes; then
+   default_qemu_user=root
+   default_qemu_group=wheel
+ else
+@@ -2709,9 +2711,9 @@ AC_CHECK_DECLS([cpuset_getaffinity],
+                ])
+ 
+ # Check for BSD kvm (kernel memory interface)
+-if test $with_freebsd = yes; then
++if test $with_freebsd = yes || test $with_openbsd = yes; then
+      AC_CHECK_LIB([kvm], [kvm_getprocs], [],
+-                  [AC_MSG_ERROR([BSD kernel memory interface library is required to build on FreeBSD])]
++                  [AC_MSG_ERROR([BSD kernel memory interface library is required to build on FreeBSD/OpenBSD])]
+                  )
+ fi
+ 

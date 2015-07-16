@@ -1,0 +1,62 @@
+@comment $OpenBSD: PLIST,v 1.16 2015/07/14 23:28:59 jasper Exp $
+lib/libvirt/
+lib/libvirt/connection-driver/
+lib/libvirt/connection-driver/libvirt_driver_network.a
+lib/libvirt/connection-driver/libvirt_driver_network.la
+lib/libvirt/connection-driver/libvirt_driver_network.so
+lib/libvirt/connection-driver/libvirt_driver_qemu.a
+lib/libvirt/connection-driver/libvirt_driver_qemu.la
+lib/libvirt/connection-driver/libvirt_driver_qemu.so
+lib/libvirt/connection-driver/libvirt_driver_secret.a
+lib/libvirt/connection-driver/libvirt_driver_secret.la
+lib/libvirt/connection-driver/libvirt_driver_secret.so
+lib/libvirt/connection-driver/libvirt_driver_storage.a
+lib/libvirt/connection-driver/libvirt_driver_storage.la
+lib/libvirt/connection-driver/libvirt_driver_storage.so
+lib/libvirt/connection-driver/libvirt_driver_vbox.a
+lib/libvirt/connection-driver/libvirt_driver_vbox.la
+lib/libvirt/connection-driver/libvirt_driver_vbox.so
+lib/libvirt/lock-driver/
+lib/libvirt/lock-driver/lockd.a
+lib/libvirt/lock-driver/lockd.la
+lib/libvirt/lock-driver/lockd.so
+@bin libexec/libvirt_iohelper
+@bin libexec/libvirt_leaseshelper
+@man man/man8/libvirtd.8
+@man man/man8/virtlockd.8
+@bin sbin/libvirtd
+@bin sbin/virtlockd
+share/augeas/lenses/libvirt_lockd.aug
+share/augeas/lenses/libvirtd.aug
+share/augeas/lenses/libvirtd_qemu.aug
+share/augeas/lenses/tests/test_libvirt_lockd.aug
+share/augeas/lenses/tests/test_libvirtd.aug
+share/augeas/lenses/tests/test_libvirtd_qemu.aug
+share/augeas/lenses/tests/test_virtlockd.aug
+share/augeas/lenses/virtlockd.aug
+share/examples/libvirt/libvirt.conf
+@sample ${SYSCONFDIR}/libvirt/libvirt.conf
+share/examples/libvirt/libvirtd.conf
+@sample ${SYSCONFDIR}/libvirt/libvirtd.conf
+share/examples/libvirt/qemu/
+@sample ${SYSCONFDIR}/libvirt/qemu/
+share/examples/libvirt/qemu-lockd.conf
+@sample ${SYSCONFDIR}/libvirt/qemu-lockd.conf
+share/examples/libvirt/qemu.conf
+@sample ${SYSCONFDIR}/libvirt/qemu.conf
+share/examples/libvirt/qemu/networks/
+@sample ${SYSCONFDIR}/libvirt/qemu/networks/
+share/examples/libvirt/qemu/networks/autostart/
+@sample ${SYSCONFDIR}/libvirt/qemu/networks/autostart/
+share/examples/libvirt/qemu/networks/autostart/default.xml
+@sample ${SYSCONFDIR}/libvirt/qemu/networks/autostart/default.xml
+share/examples/libvirt/qemu/networks/default.xml
+@sample ${SYSCONFDIR}/libvirt/qemu/networks/default.xml
+share/examples/libvirt/virtlockd.conf
+@sample ${SYSCONFDIR}/libvirt/virtlockd.conf
+share/polkit-1/
+share/polkit-1/actions/
+share/polkit-1/actions/org.libvirt.api.policy
+share/polkit-1/actions/org.libvirt.unix.policy
+share/polkit-1/rules.d/
+share/polkit-1/rules.d/50-libvirt.rules

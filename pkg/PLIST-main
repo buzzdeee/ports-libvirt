@@ -20,7 +20,6 @@ include/libvirt/libvirt-stream.h
 include/libvirt/libvirt.h
 include/libvirt/virterror.h
 @comment lib/charset.alias
-lib/libvirt/
 lib/libvirt-admin.a
 lib/libvirt-admin.la
 @lib lib/libvirt-admin.so.${LIBvirt-admin_VERSION}
@@ -33,51 +32,17 @@ lib/libvirt-qemu.la
 lib/libvirt.a
 lib/libvirt.la
 @lib lib/libvirt.so.${LIBvirt_VERSION}
-lib/libvirt/connection-driver/
-lib/libvirt/connection-driver/libvirt_driver_network.a
-lib/libvirt/connection-driver/libvirt_driver_network.la
-lib/libvirt/connection-driver/libvirt_driver_network.so
-lib/libvirt/connection-driver/libvirt_driver_qemu.a
-lib/libvirt/connection-driver/libvirt_driver_qemu.la
-lib/libvirt/connection-driver/libvirt_driver_qemu.so
-lib/libvirt/connection-driver/libvirt_driver_secret.a
-lib/libvirt/connection-driver/libvirt_driver_secret.la
-lib/libvirt/connection-driver/libvirt_driver_secret.so
-lib/libvirt/connection-driver/libvirt_driver_storage.a
-lib/libvirt/connection-driver/libvirt_driver_storage.la
-lib/libvirt/connection-driver/libvirt_driver_storage.so
-lib/libvirt/connection-driver/libvirt_driver_vbox.a
-lib/libvirt/connection-driver/libvirt_driver_vbox.la
-lib/libvirt/connection-driver/libvirt_driver_vbox.so
-lib/libvirt/lock-driver/
-lib/libvirt/lock-driver/lockd.a
-lib/libvirt/lock-driver/lockd.la
-lib/libvirt/lock-driver/lockd.so
 lib/pkgconfig/libvirt-lxc.pc
 lib/pkgconfig/libvirt-qemu.pc
 lib/pkgconfig/libvirt.pc
 libexec/libvirt-guests.sh
-@bin libexec/libvirt_iohelper
-@bin libexec/libvirt_leaseshelper
 @man man/man1/virsh.1
 @man man/man1/virt-host-validate.1
 @man man/man1/virt-pki-validate.1
 @man man/man1/virt-xml-validate.1
-@man man/man8/libvirtd.8
-@man man/man8/virtlockd.8
-@bin sbin/libvirtd
-@bin sbin/virtlockd
 share/augeas/
 share/augeas/lenses/
-share/augeas/lenses/libvirt_lockd.aug
-share/augeas/lenses/libvirtd.aug
-share/augeas/lenses/libvirtd_qemu.aug
 share/augeas/lenses/tests/
-share/augeas/lenses/tests/test_libvirt_lockd.aug
-share/augeas/lenses/tests/test_libvirtd.aug
-share/augeas/lenses/tests/test_libvirtd_qemu.aug
-share/augeas/lenses/tests/test_virtlockd.aug
-share/augeas/lenses/virtlockd.aug
 share/doc/libvirt/
 share/doc/libvirt/html/
 share/doc/libvirt/html/32favicon.png
@@ -212,15 +177,6 @@ share/examples/libvirt/
 @sample ${SYSCONFDIR}/libvirt/
 share/examples/libvirt/libvirt.conf
 @sample ${SYSCONFDIR}/libvirt/libvirt.conf
-share/examples/libvirt/libvirtd.conf
-share/examples/libvirt/qemu/
-share/examples/libvirt/qemu-lockd.conf
-share/examples/libvirt/qemu.conf
-share/examples/libvirt/qemu/networks/
-share/examples/libvirt/qemu/networks/autostart/
-share/examples/libvirt/qemu/networks/autostart/default.xml
-share/examples/libvirt/qemu/networks/default.xml
-share/examples/libvirt/virtlockd.conf
 share/gtk-doc/html/libvirt/
 share/gtk-doc/html/libvirt/general.html
 share/gtk-doc/html/libvirt/home.png
@@ -324,9 +280,3 @@ share/locale/zu/
 share/locale/zu/LC_MESSAGES/
 share/locale/zu/LC_MESSAGES/libvirt.mo
 @sample /var/cache/libvirt/
-share/polkit-1/
-share/polkit-1/actions/
-share/polkit-1/actions/org.libvirt.api.policy
-share/polkit-1/actions/org.libvirt.unix.policy
-share/polkit-1/rules.d/
-share/polkit-1/rules.d/50-libvirt.rules
