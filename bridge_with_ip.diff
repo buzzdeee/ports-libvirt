@@ -1,0 +1,49 @@
+? bridge_with_ip.diff
+Index: net/if_bridge.c
+===================================================================
+RCS file: /cvs/src/sys/net/if_bridge.c,v
+retrieving revision 1.252
+diff -u -r1.252 if_bridge.c
+--- net/if_bridge.c	2 Jul 2015 10:02:40 -0000	1.252
++++ net/if_bridge.c	15 Jul 2015 19:06:00 -0000
+@@ -306,13 +306,25 @@
+ 	struct ifbrlreq *brlreq = (struct ifbrlreq *)data;
+ 	struct ifbropreq *brop = (struct ifbropreq *)data;
+ 	struct ifnet *ifs;
++	struct ifaddr *ifa;
+ 	struct bridge_iflist *p;
+ 	struct bstp_port *bp;
+ 	struct bstp_state *bs = sc->sc_stp;
+ 	int error = 0, s;
+ 
++        ifa = (struct ifaddr *)data;
++
+ 	s = splnet();
+ 	switch (cmd) {
++	case SIOCSIFADDR:
++	case SIOCAIFADDR:
++		if ((error = suser(curproc, 0)) != 0)
++			break;
++		ifp->if_flags |= IFF_UP;
++		if (ifa->ifa_addr->sa_family == AF_INET)
++			arp_ifinit((struct arpcom *)ifp, ifa);
++		break;
++		
+ 	case SIOCBRDGADD:
+ 		if ((error = suser(curproc, 0)) != 0)
+ 			break;
+Index: net/if_vlan.c
+===================================================================
+RCS file: /cvs/src/sys/net/if_vlan.c,v
+retrieving revision 1.134
+diff -u -r1.134 if_vlan.c
+--- net/if_vlan.c	2 Jul 2015 09:40:02 -0000	1.134
++++ net/if_vlan.c	15 Jul 2015 19:06:00 -0000
+@@ -538,7 +538,6 @@
+ 
+ 	ifr = (struct ifreq *)data;
+ 	ifa = (struct ifaddr *)data;
+-	ifv = ifp->if_softc;
+ 
+ 	switch (cmd) {
+ 	case SIOCSIFADDR:
