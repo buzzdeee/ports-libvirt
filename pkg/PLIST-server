@@ -34,8 +34,6 @@ share/augeas/lenses/tests/test_libvirtd.aug
 share/augeas/lenses/tests/test_libvirtd_qemu.aug
 share/augeas/lenses/tests/test_virtlockd.aug
 share/augeas/lenses/virtlockd.aug
-share/examples/libvirt/libvirt.conf
-@sample ${SYSCONFDIR}/libvirt/libvirt.conf
 share/examples/libvirt/libvirtd.conf
 @sample ${SYSCONFDIR}/libvirt/libvirtd.conf
 share/examples/libvirt/qemu/

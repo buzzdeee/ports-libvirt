@@ -1,0 +1,556 @@
+$OpenBSD$
+--- src/util/vircommand.c.orig	Thu Jun 25 16:00:33 2015
++++ src/util/vircommand.c	Fri Jul 24 17:03:38 2015
+@@ -273,6 +273,9 @@ virCommandReorderFDs(virCommandPtr cmd)
+ 
+  error:
+     cmd->has_error = -1;
++            virReportSystemError(errno,
++                                 _("virCommandReorderFDs, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+     return;
+ }
+ 
+@@ -981,17 +984,25 @@ virCommandPassFD(virCommandPtr cmd, int fd, unsigned i
+         return;
+     }
+ 
++            virReportSystemError(fd, "%s",
++                                 _("virCommandPassFD FD given in errno, we have a command!!!!"));
+     if (fd <= STDERR_FILENO) {
+         VIR_DEBUG("invalid fd %d", fd);
+         VIR_COMMAND_MAYBE_CLOSE_FD(fd, flags);
+-        if (!cmd->has_error)
++        if (!cmd->has_error) {
+             cmd->has_error = -1;
++            virReportSystemError(errno, "%s %d", "virCommandPassFD setting has_error = -1 invalid fd: ", fd);
++        }
+         return;
+     }
+ 
+     if ((ret = virCommandFDSet(cmd, fd, flags)) != 0) {
+-        if (!cmd->has_error)
++        if (!cmd->has_error) {
+             cmd->has_error = ret;
++            virReportSystemError(errno,
++                                 _("virCommandPassFD, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
++	}
+         VIR_DEBUG("cannot preserve %d", fd);
+         VIR_COMMAND_MAYBE_CLOSE_FD(fd, flags);
+         return;
+@@ -1054,8 +1065,12 @@ virCommandSetPidFile(virCommandPtr cmd, const char *pi
+         return;
+ 
+     VIR_FREE(cmd->pidfile);
+-    if (VIR_STRDUP_QUIET(cmd->pidfile, pidfile) < 0)
++    if (VIR_STRDUP_QUIET(cmd->pidfile, pidfile) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandSetPidFile, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
++    }
+ }
+ 
+ 
+@@ -1164,8 +1179,12 @@ virCommandSetSELinuxLabel(virCommandPtr cmd,
+ 
+ #if defined(WITH_SECDRIVER_SELINUX)
+     VIR_FREE(cmd->seLinuxLabel);
+-    if (VIR_STRDUP_QUIET(cmd->seLinuxLabel, label) < 0)
++    if (VIR_STRDUP_QUIET(cmd->seLinuxLabel, label) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandSetSELinuxLabel, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
++    }
+ #endif
+     return;
+ }
+@@ -1189,8 +1208,12 @@ virCommandSetAppArmorProfile(virCommandPtr cmd,
+ 
+ #if defined(WITH_SECDRIVER_APPARMOR)
+     VIR_FREE(cmd->appArmorProfile);
+-    if (VIR_STRDUP_QUIET(cmd->appArmorProfile, profile) < 0)
++    if (VIR_STRDUP_QUIET(cmd->appArmorProfile, profile) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandSetAppArmorProfile, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
++    }
+ #endif
+     return;
+ }
+@@ -1273,6 +1296,9 @@ virCommandAddEnv(virCommandPtr cmd, char *env)
+     if (VIR_RESIZE_N(cmd->env, cmd->maxenv, cmd->nenv, 1 + 1) < 0) {
+         VIR_FREE(env);
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnv, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1299,6 +1325,9 @@ virCommandAddEnvFormat(virCommandPtr cmd, const char *
+     va_start(list, format);
+     if (virVasprintf(&env, format, list) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnvFormat, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+         va_end(list);
+         return;
+     }
+@@ -1341,6 +1370,9 @@ virCommandAddEnvString(virCommandPtr cmd, const char *
+ 
+     if (VIR_STRDUP_QUIET(env, str) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnvString, in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1367,11 +1399,17 @@ virCommandAddEnvBuffer(virCommandPtr cmd, virBufferPtr
+ 
+     if (virBufferError(buf)) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnvBuffer, ENOMEM in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+         virBufferFreeAndReset(buf);
+         return;
+     }
+     if (!virBufferUse(buf)) {
+         cmd->has_error = EINVAL;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnvBuffer, EINVAL in error: label"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1443,6 +1481,9 @@ virCommandAddEnvPassCommon(virCommandPtr cmd)
+ 
+     if (VIR_RESIZE_N(cmd->env, cmd->maxenv, cmd->nenv, 9) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddEnvPassCommon"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1474,6 +1515,9 @@ virCommandAddArg(virCommandPtr cmd, const char *val)
+ 
+     if (VIR_STRDUP_QUIET(arg, val) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArg"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1481,6 +1525,9 @@ virCommandAddArg(virCommandPtr cmd, const char *val)
+     if (VIR_RESIZE_N(cmd->args, cmd->maxargs, cmd->nargs, 1 + 1) < 0) {
+         VIR_FREE(arg);
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArg 2nd"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1508,6 +1555,9 @@ virCommandAddArgBuffer(virCommandPtr cmd, virBufferPtr
+     if (virBufferError(buf) ||
+         VIR_RESIZE_N(cmd->args, cmd->maxargs, cmd->nargs, 1 + 1) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgBuffer"
++                                   "setting has_error to %d"), cmd->has_error);
+         virBufferFreeAndReset(buf);
+         return;
+     }
+@@ -1516,6 +1566,9 @@ virCommandAddArgBuffer(virCommandPtr cmd, virBufferPtr
+     if (!cmd->args[cmd->nargs]) {
+         if (VIR_STRDUP_QUIET(cmd->args[cmd->nargs], "") < 0) {
+             cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgBuffer 2nd"
++                                   "setting has_error to %d"), cmd->has_error);
+             return;
+         }
+     }
+@@ -1543,6 +1596,9 @@ virCommandAddArgFormat(virCommandPtr cmd, const char *
+     va_start(list, format);
+     if (virVasprintf(&arg, format, list) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgFormat"
++                                   "setting has_error to %d"), cmd->has_error);
+         va_end(list);
+         return;
+     }
+@@ -1552,6 +1608,9 @@ virCommandAddArgFormat(virCommandPtr cmd, const char *
+     if (VIR_RESIZE_N(cmd->args, cmd->maxargs, cmd->nargs, 1 + 1) < 0) {
+         VIR_FREE(arg);
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgFormat 2nd"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1589,6 +1648,9 @@ virCommandAddArgSet(virCommandPtr cmd, const char *con
+ 
+     if (vals[0] == NULL) {
+         cmd->has_error = EINVAL;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgSet EINVAL"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1598,6 +1660,9 @@ virCommandAddArgSet(virCommandPtr cmd, const char *con
+     /* narg plus trailing NULL. */
+     if (VIR_RESIZE_N(cmd->args, cmd->maxargs, cmd->nargs, narg + 1) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgSet ENOMEM"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1607,6 +1672,9 @@ virCommandAddArgSet(virCommandPtr cmd, const char *con
+ 
+         if (VIR_STRDUP_QUIET(arg, vals[narg++]) < 0) {
+             cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgSet ENOMEM 2nd"
++                                   "setting has_error to %d"), cmd->has_error);
+             return;
+         }
+         cmd->args[cmd->nargs++] = arg;
+@@ -1637,6 +1705,9 @@ virCommandAddArgList(virCommandPtr cmd, ...)
+     /* narg plus trailing NULL. */
+     if (VIR_RESIZE_N(cmd->args, cmd->maxargs, cmd->nargs, narg + 1) < 0) {
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgList ENOMEM"
++                                   "setting has_error to %d"), cmd->has_error);
+         return;
+     }
+ 
+@@ -1647,6 +1718,9 @@ virCommandAddArgList(virCommandPtr cmd, ...)
+             break;
+         if (VIR_STRDUP_QUIET(arg, arg) < 0) {
+             cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandAddArgList ENOMEM 2nd"
++                                   "setting has_error to %d"), cmd->has_error);
+             va_end(list);
+             return;
+         }
+@@ -1672,10 +1746,17 @@ virCommandSetWorkingDirectory(virCommandPtr cmd, const
+ 
+     if (cmd->pwd) {
+         cmd->has_error = -1;
++            virReportSystemError(errno,
++                                 _("virCommandSetWorkingDirectory"
++                                   "setting has_error to %d"), cmd->has_error);
+         VIR_DEBUG("cannot set directory twice");
+     } else {
+-        if (VIR_STRDUP_QUIET(cmd->pwd, pwd) < 0)
++        if (VIR_STRDUP_QUIET(cmd->pwd, pwd) < 0) {
+             cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandSetWorkingDirectory ENOMEM"
++                                   "setting has_error to %d"), cmd->has_error);
++	}
+     }
+ }
+ 
+@@ -1703,6 +1784,9 @@ virCommandSetInputBuffer(virCommandPtr cmd, const char
+ 
+     if (VIR_STRDUP_QUIET(cmd->inbuf, inbuf) < 0)
+         cmd->has_error = ENOMEM;
++            virReportSystemError(errno,
++                                 _("virCommandSetInputBuffer ENOMEM"
++                                   "setting has_error to %d"), cmd->has_error);
+ }
+ 
+ 
+@@ -1945,9 +2029,9 @@ virCommandToString(virCommandPtr cmd)
+         return NULL;
+     }
+     if (cmd->has_error) {
+-        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
+-        return NULL;
++        virReportError(VIR_ERR_INTERNAL_ERROR, "%s %d", "virCommandToString: invalid use of command API, cmd->has_error is ", cmd->has_error);
++        virReportError(VIR_ERR_INTERNAL_ERROR, "%s %d", "NOT JUMPING OUT HERE EITHER");
++        //return NULL;
+     }
+ 
+     for (i = 0; i < cmd->nenv; i++) {
+@@ -1958,7 +2042,7 @@ virCommandToString(virCommandPtr cmd)
+         if (!eq) {
+             virBufferFreeAndReset(&buf);
+             virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                           _("invalid use of command API"));
++                           _("invalid use of command API the eq wasn't determined"));
+             return NULL;
+         }
+         eq++;
+@@ -2147,7 +2231,7 @@ int virCommandExec(virCommandPtr cmd)
+     }
+     if (cmd->has_error) {
+         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
++                       _("virCommandExec: invalid use of command API, cmd->has_error"));
+         return -1;
+     }
+ 
+@@ -2192,15 +2276,154 @@ virCommandRun(virCommandPtr cmd, int *exitstatus)
+     bool async_io = false;
+     char *str;
+     int tmpfd;
+-
++        virReportSystemError(errno, "virCommandRun: num args: %d", cmd->nargs);
++	if (cmd->nargs == 12)
++        virReportSystemError(errno, "virCommandRun: command: %s %s %s %s %s %s %s %s %s %s %s %s", cmd->args[0],
++		cmd->args[1],
++		cmd->args[2],
++		cmd->args[3],
++		cmd->args[4],
++		cmd->args[5],
++		cmd->args[6],
++		cmd->args[7],
++		cmd->args[8],
++		cmd->args[9],
++		cmd->args[10],
++		cmd->args[11]);
++	if (cmd->nargs == 31) 
++        virReportSystemError(errno, "virCommandRun: command: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s", cmd->args[0],
++		cmd->args[1],
++		cmd->args[2],
++		cmd->args[3],
++		cmd->args[4],
++		cmd->args[5],
++		cmd->args[6],
++		cmd->args[7],
++		cmd->args[8],
++		cmd->args[9],
++		cmd->args[10],
++		cmd->args[11],
++		cmd->args[12],
++		cmd->args[13],
++		cmd->args[14],
++		cmd->args[15],
++		cmd->args[16],
++		cmd->args[17],
++		cmd->args[18],
++		cmd->args[19],
++		cmd->args[20],
++		cmd->args[21],
++		cmd->args[22],
++		cmd->args[23],
++		cmd->args[24],
++		cmd->args[25],
++		cmd->args[26],
++		cmd->args[27],
++		cmd->args[28],
++		cmd->args[29],
++		cmd->args[30]);
++	if (cmd->nargs == 47) { 
++        virReportSystemError(errno, "virCommandRun: command: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s XXX %s %s", cmd->args[0],
++		cmd->args[1],
++		cmd->args[2],
++		cmd->args[3],
++		cmd->args[4],
++		cmd->args[5],
++		cmd->args[6],
++		cmd->args[7],
++		cmd->args[8],
++		cmd->args[9],
++		cmd->args[10],
++		cmd->args[11],
++		cmd->args[12],
++		cmd->args[13],
++		cmd->args[14],
++		cmd->args[15],
++		cmd->args[16],
++		cmd->args[17],
++		cmd->args[18],
++		cmd->args[19],
++		cmd->args[20],
++		cmd->args[21],
++		cmd->args[22],
++		cmd->args[23],
++		cmd->args[24],
++		cmd->args[25],
++		cmd->args[26],
++		cmd->args[27],
++		cmd->args[28],
++		cmd->args[29],
++		cmd->args[30],
++		cmd->args[31],
++		cmd->args[32],
++		cmd->args[33],
++		cmd->args[34],
++		cmd->args[35],
++		cmd->args[36],
++		cmd->args[37],
++		cmd->args[38],
++		cmd->args[39],
++		cmd->args[40],
++		cmd->args[41],
++		cmd->args[43],
++		cmd->args[45],
++		cmd->args[46]);
++/*        virReportSystemError(errno, "virCommandRun: command: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s", cmd->args[0],
++		cmd->args[1],
++		cmd->args[2],
++		cmd->args[3],
++		cmd->args[4],
++		cmd->args[5],
++		cmd->args[6],
++		cmd->args[7],
++		cmd->args[8],
++		cmd->args[9],
++		cmd->args[10],
++		cmd->args[11],
++		cmd->args[12],
++		cmd->args[13],
++		cmd->args[14],
++		cmd->args[15],
++		cmd->args[16],
++		cmd->args[17],
++		cmd->args[18],
++		cmd->args[19],
++		cmd->args[20],
++		cmd->args[21],
++		cmd->args[22],
++		cmd->args[23],
++		cmd->args[24],
++		cmd->args[25],
++		cmd->args[26],
++		cmd->args[27],
++		cmd->args[28],
++		cmd->args[29],
++		cmd->args[30],
++		cmd->args[31],
++		cmd->args[32],
++		cmd->args[33],
++		cmd->args[34],
++		cmd->args[35],
++		cmd->args[36],
++		cmd->args[37],
++		cmd->args[38],
++		cmd->args[39],
++		cmd->args[40],
++		cmd->args[41],
++		cmd->args[42],
++		cmd->args[43],
++		cmd->args[44],
++		cmd->args[45],
++		cmd->args[46]); */
++	}
+     if (!cmd ||cmd->has_error == ENOMEM) {
+         virReportOOMError();
+         return -1;
+     }
+     if (cmd->has_error) {
+-        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
+-        return -1;
++        virReportSystemError(cmd->has_error, "%s %d", "virCommandRun: invalid use of command API, has_error is ", cmd->has_error);
++        virReportSystemError(cmd->has_error, "%s ", "NOT JUMPING OUT HERE!!!");
++        //return -1;
+     }
+ 
+     /* Avoid deadlock, by requiring that any open fd not under our
+@@ -2350,8 +2573,10 @@ virCommandRunAsync(virCommandPtr cmd, pid_t *pid)
+     }
+     if (cmd->has_error) {
+         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
+-        return -1;
++                       _("virCommandRunAsync: invalid use of command API has_error"));
++        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
++                       _("SAME HERE, NOT JUMPING OUT"));
++        //return -1;
+     }
+ 
+     synchronous = cmd->flags & VIR_EXEC_RUN_SYNC;
+@@ -2496,8 +2721,9 @@ virCommandWait(virCommandPtr cmd, int *exitstatus)
+     }
+     if (cmd->has_error) {
+         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
+-        return -1;
++                       _("virCommandWait: invalid use of command API, has_error"));
++        virReportSystemError(errno, "%s", "virCommandWait: NOT JUMPING OUT HERE EITHER");
++        //return -1;
+     }
+ 
+     if (dryRunBuffer || dryRunCallback) {
+@@ -2621,12 +2847,14 @@ void virCommandRequireHandshake(virCommandPtr cmd)
+         return;
+     }
+ 
+-    VIR_DEBUG("Transfer handshake wait=%d notify=%d, "
+-              "keep handshake wait=%d notify=%d",
++    virReportSystemError(errno, "virCommandRequireHandshake: Transfer handshake wait=%d notify=%d, keep handshake wait=%d notify=%d",
+               cmd->handshakeWait[1], cmd->handshakeNotify[0],
+               cmd->handshakeWait[0], cmd->handshakeNotify[1]);
+     virCommandPassFD(cmd, cmd->handshakeWait[1],
+                      VIR_COMMAND_PASS_FD_CLOSE_PARENT);
++    virReportSystemError(errno, "virCommandRequireHandshake: Transfer handshake wait=%d notify=%d, keep handshake wait=%d notify=%d",
++              cmd->handshakeWait[1], cmd->handshakeNotify[0],
++              cmd->handshakeWait[0], cmd->handshakeNotify[1]);
+     virCommandPassFD(cmd, cmd->handshakeNotify[0],
+                      VIR_COMMAND_PASS_FD_CLOSE_PARENT);
+     cmd->handshake = true;
+@@ -2648,15 +2876,17 @@ int virCommandHandshakeWait(virCommandPtr cmd)
+         return -1;
+     }
+     if (cmd->has_error || !cmd->handshake) {
+-        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
+-        return -1;
++        virReportSystemError(errno, "virCommandHandshakeWait: invalid use of command API, has_error: %d, handshake: %d", cmd->has_error, cmd->handshake);
++        virReportSystemError(errno, "%s", "virCommandHandshakeWait: NOT JUMPING OUT HERE EITHER");
++        //return -1;
+     }
+ 
+     if (cmd->handshakeWait[0] == -1) {
+         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                        _("Handshake is already complete"));
+-        return -1;
++        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
++                       _("NOT JUMPING OUT"));
++        //return -1;
+     }
+ 
+     VIR_DEBUG("Wait for handshake on %d", cmd->handshakeWait[0]);
+@@ -2667,8 +2897,11 @@ int virCommandHandshakeWait(virCommandPtr cmd)
+         else
+             virReportSystemError(EIO, "%s",
+                                  _("Child quit during startup handshake"));
++        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
++                       _("NOT JUMPING OUT"));
++        return 0;
+         VIR_FORCE_CLOSE(cmd->handshakeWait[0]);
+-        return -1;
++        // return -1;
+     }
+     if (c != '1') {
+         char *msg;
+@@ -2715,7 +2948,7 @@ int virCommandHandshakeNotify(virCommandPtr cmd)
+     }
+     if (cmd->has_error || !cmd->handshake) {
+         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+-                       _("invalid use of command API"));
++                       _("virCommandHandshakeNotify: invalid use of command API has_error"));
+         return -1;
+     }
+ 

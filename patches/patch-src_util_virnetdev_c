@@ -1,0 +1,97 @@
+$OpenBSD$
+
+After bridge creation works, renaming of the device to virbrXX fails :(
+
+--- src/util/virnetdev.c.orig	Thu Jun 25 16:00:33 2015
++++ src/util/virnetdev.c	Thu Jul 23 07:08:33 2015
+@@ -283,7 +283,11 @@ int virNetDevSetMAC(const char *ifname,
+                                  _("Cannot set interface MAC on '%s'"),
+                                  ifname);
+             goto cleanup;
+-        }
++        } else {
++            virReportSystemError(errno,
++                                 _("Successfully set interface MAC on '%s'"),
++                                 ifname);
++	}
+ 
+         ret = 0;
+  cleanup:
+@@ -560,6 +564,14 @@ int virNetDevSetName(const char* ifname, const char *n
+     VIR_FORCE_CLOSE(fd);
+     return ret;
+ }
++#elif defined(__OpenBSD__)
++int virNetDevSetName(const char* ifname, const char *newifname)
++{
++    virReportSystemError(ENOSYS,
++                         _("Skipping renaming interface '%s' to '%s' on this platform"),
++                         ifname, newifname);
++    return 0;
++}
+ #else
+ int virNetDevSetName(const char* ifname, const char *newifname)
+ {
+@@ -855,12 +867,47 @@ int virNetDevGetIndex(const char *ifname, int *ifindex
+     return ret;
+ }
+ #else /* ! SIOCGIFINDEX */
+-int virNetDevGetIndex(const char *ifname ATTRIBUTE_UNUSED,
+-                      int *ifindex ATTRIBUTE_UNUSED)
++int virNetDevGetIndex(const char *ifname,
++                      int *ifindex)
+ {
+-    virReportSystemError(ENOSYS, "%s",
+-                         _("Unable to get interface index on this platform"));
+-    return -1;
++	/* have to use brute force */
++        virReportSystemError(errno, "testing interface: %s", ifname);
++    if (strstr(ifname, "tun") != NULL) {
++	char tmpname[IFNAMSIZ];
++	int max=1000;
++	int i=0;
++        virReportSystemError(errno, "found interface must be a TUN: %s", ifname);
++	while (i<max) {
++		snprintf(tmpname, IFNAMSIZ, "tun%d", i);
++        virReportSystemError(errno, "iterating tun interface: %s", tmpname);
++		if (strncmp(ifname,tmpname,strlen(ifname)) == 0) {
++			ifindex = i;
++			break;
++		}
++		i++;
++	}
++    } else if (strstr(ifname, "bridge") != NULL) {
++	char tmpname[IFNAMSIZ];
++	int max=1000;
++	int i=0;
++        virReportSystemError(errno, "found interface must be a BRIDGE: %s ", ifname);
++	while (i<max) {
++		snprintf(tmpname, IFNAMSIZ, "bridge%d", i);
++		if (strncmp(ifname,tmpname,strlen(ifname)) == 0) {
++			ifindex = i;
++			break;
++		}
++		i++;
++	}
++    } else {
++
++        virReportSystemError(errno,
++                             _("virNetDevGetIndex: invalid interface name %s"),
++                             ifname);
++        ifindex = -1;
++   }
++        virReportSystemError(errno, "virNetDevGetIndex: returning ifindex: %d", ifindex);
++   return ifindex;
+ }
+ #endif /* ! SIOCGIFINDEX */
+ 
+@@ -1495,6 +1542,9 @@ int virNetDevValidateConfig(const char *ifname,
+     struct ifreq ifr;
+     int idx;
+     int rc;
++            virReportSystemError(errno,
++                                 _("virNetDevValidateConfig: validating interface: %s"),
++                                 ifname);
+ 
+     if ((rc = virNetDevExists(ifname)) < 0)
+         return -1;

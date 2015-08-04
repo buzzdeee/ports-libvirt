@@ -1,0 +1,11 @@
+$OpenBSD$
+--- src/fdstream.c.orig	Tue Jul 21 19:50:51 2015
++++ src/fdstream.c	Tue Jul 21 19:52:09 2015
+@@ -652,6 +652,7 @@ virFDStreamOpenFileInternal(virStreamPtr st,
+         VIR_FREE(iohelper_path);
+ 
+         virCommandAddArgFormat(cmd, "%llu", length);
++            virReportSystemError(errno, "%s %d", "here comes the file descriptor: ", fd);
+         virCommandPassFD(cmd, fd,
+                          VIR_COMMAND_PASS_FD_CLOSE_PARENT);
+         virCommandAddArgFormat(cmd, "%d", fd);

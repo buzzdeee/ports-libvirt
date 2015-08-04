@@ -1,0 +1,29 @@
+$OpenBSD$
+
+CPU Affinity not implemented? on OpenBSD
+
+--- src/util/virprocess.c.orig	Thu Jun 25 16:00:33 2015
++++ src/util/virprocess.c	Thu Jul 16 21:28:36 2015
+@@ -580,6 +580,22 @@ virProcessGetAffinity(pid_t pid)
+     return ret;
+ }
+ 
++#elif defined(__OpenBSD__)
++virBitmapPtr virProcessGetAffinity(pid_t pid)
++{
++    virReportSystemError(0,
++                         _("cannot get CPU affinity of process %d on OpenBSD"), pid);
++    return 0;
++}
++
++int virProcessSetAffinity(pid_t pid ATTRIBUTE_UNUSED,
++                          virBitmapPtr map ATTRIBUTE_UNUSED)
++{
++    virReportSystemError(0,
++                         _("cannot set CPU affinity of process %d on OpenBSD"), pid);
++    return 0;
++}
++
+ #else /* HAVE_SCHED_GETAFFINITY */
+ 
+ int virProcessSetAffinity(pid_t pid ATTRIBUTE_UNUSED,

@@ -1,0 +1,12 @@
+$OpenBSD$
+--- src/util/virnetdevbridge.h.orig	Wed Jul  8 07:44:44 2015
++++ src/util/virnetdevbridge.h	Wed Jul  8 07:45:02 2015
+@@ -26,7 +26,7 @@
+ # include "internal.h"
+ # include "virmacaddr.h"
+ 
+-int virNetDevBridgeCreate(const char *brname)
++int virNetDevBridgeCreate(char *brname)
+     ATTRIBUTE_NONNULL(1) ATTRIBUTE_RETURN_CHECK;
+ int virNetDevBridgeDelete(const char *brname)
+     ATTRIBUTE_NONNULL(1) ATTRIBUTE_RETURN_CHECK;

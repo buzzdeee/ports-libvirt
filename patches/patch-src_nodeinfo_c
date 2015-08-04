@@ -1,0 +1,118 @@
+$OpenBSD$
+
+Implement basic nodeinfo like done for FreeBSD and Apple
+That allows virt-manager to connect to our QEMU
+
+--- src/nodeinfo.c.orig	Thu Jun 25 16:00:33 2015
++++ src/nodeinfo.c	Thu Jul 16 17:18:15 2015
+@@ -33,7 +33,7 @@
+ #include <sched.h>
+ #include "conf/domain_conf.h"
+ 
+-#if defined(__FreeBSD__) || defined(__APPLE__)
++#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__OpenBSD__)
+ # include <sys/time.h>
+ # include <sys/types.h>
+ # include <sys/sysctl.h>
+@@ -58,9 +58,9 @@
+ 
+ VIR_LOG_INIT("nodeinfo");
+ 
+-#if defined(__FreeBSD__) || defined(__APPLE__)
++#if defined(__FreeBSD__) || defined(__APPLE__)  || defined(__OpenBSD__)
+ static int
+-appleFreebsdNodeGetCPUCount(void)
++appleFreebsdOpenbsdNodeGetCPUCount(void)
+ {
+     int ncpu_mib[2] = { CTL_HW, HW_NCPU };
+     unsigned long ncpu;
+@@ -78,14 +78,18 @@ appleFreebsdNodeGetCPUCount(void)
+  * is 64 bits while that of Mac OS X is still 32 bits.
+  * Mac OS X provides HW_MEMSIZE for 64 bits version of HW_PHYSMEM
+  * since 10.6.8 (Snow Leopard) at least.
++ * OpenBSD has HW_PHYSMEM defined, but to get the right value
++ * have to use HW_PHYSMEM64 instead.
+  */
+-# ifdef HW_MEMSIZE
++# if defined(HW_MEMSIZE)
+ #  define VIR_HW_PHYSMEM HW_MEMSIZE
++# elif defined(HW_PHYSMEM64)
++#  define VIR_HW_PHYSMEM HW_PHYSMEM64
+ # else
+ #  define VIR_HW_PHYSMEM HW_PHYSMEM
+ # endif
+ static int
+-appleFreebsdNodeGetMemorySize(unsigned long *memory)
++appleFreebsdOpenbsdNodeGetMemorySize(unsigned long *memory)
+ {
+     int mib[2] = { CTL_HW, VIR_HW_PHYSMEM };
+     unsigned long physmem;
+@@ -158,7 +162,7 @@ freebsdNodeGetCPUStats(int cpuNum,
+         offset = 0;
+     } else {
+         sysctl_name = "kern.cp_times";
+-        cpu_times_num = appleFreebsdNodeGetCPUCount();
++        cpu_times_num = appleFreebsdOpenbsdNodeGetCPUCount();
+ 
+         if (cpuNum >= cpu_times_num) {
+             virReportInvalidArg(cpuNum,
+@@ -1061,7 +1065,7 @@ int nodeGetInfo(virNodeInfoPtr nodeinfo)
+     nodeinfo->sockets = 1;
+     nodeinfo->threads = 1;
+ 
+-    nodeinfo->cpus = appleFreebsdNodeGetCPUCount();
++    nodeinfo->cpus = appleFreebsdOpenbsdNodeGetCPUCount();
+     if (nodeinfo->cpus == -1)
+         return -1;
+ 
+@@ -1086,11 +1090,38 @@ int nodeGetInfo(virNodeInfoPtr nodeinfo)
+     nodeinfo->mhz = cpu_freq / 1000000;
+ # endif
+ 
+-    if (appleFreebsdNodeGetMemorySize(&nodeinfo->memory) < 0)
++    if (appleFreebsdOpenbsdNodeGetMemorySize(&nodeinfo->memory) < 0)
+         return -1;
+ 
+     return 0;
+     }
++#elif defined(__OpenBSD__)
++    {
++    int cpuspeed_mib[2] = { CTL_HW, HW_CPUSPEED };
++    int cpuspeed;
++    size_t cpuspeed_len = sizeof(cpuspeed);
++
++    nodeinfo->nodes = 1;
++    nodeinfo->sockets = 1;
++    nodeinfo->threads = 1;
++
++    nodeinfo->cpus = appleFreebsdOpenbsdNodeGetCPUCount();
++    if (nodeinfo->cpus == -1)
++        return -1;
++
++    nodeinfo->cores = nodeinfo->cpus;
++
++    if (sysctl(cpuspeed_mib, 2, &cpuspeed, &cpuspeed_len, NULL, 0) == -1) {
++        virReportSystemError(errno, "%s", _("Cannot obtain CPU speed"));
++        return -1;
++    }
++    nodeinfo->mhz = cpuspeed;
++
++    if (appleFreebsdOpenbsdNodeGetMemorySize(&nodeinfo->memory) < 0)
++        return -1;
++  
++    return 0;
++    }
+ #else
+     /* XXX Solaris will need an impl later if they port QEMU driver */
+     virReportError(VIR_ERR_NO_SUPPORT, "%s",
+@@ -1216,8 +1247,8 @@ nodeGetCPUCount(void)
+ 
+     VIR_FREE(cpupath);
+     return ncpu;
+-#elif defined(__FreeBSD__) || defined(__APPLE__)
+-    return appleFreebsdNodeGetCPUCount();
++#elif defined(__FreeBSD__) || defined(__APPLE__) || defined(__OpenBSD__)
++    return appleFreebsdOpenbsdNodeGetCPUCount();
+ #else
+     virReportError(VIR_ERR_NO_SUPPORT, "%s",
+                    _("host cpu counting not implemented on this platform"));

@@ -1,0 +1,52 @@
+$OpenBSD$
+
+we cannot rename interfaces, so use bridge instead of virbr,
+and we don't have sysctlbyname, so use sysctl directly to
+enable forwarding.
+
+--- src/network/bridge_driver.c.orig	Thu Jun 25 16:00:33 2015
++++ src/network/bridge_driver.c	Thu Jul 16 21:38:20 2015
+@@ -1871,18 +1871,34 @@ networkEnableIpForwarding(bool enableIPv4, bool enable
+     int ret = 0;
+ #ifdef HAVE_SYSCTLBYNAME
+     int enabled = 1;
++        virReportError(errno, "here in SYSCTLBYNAME trying to set forwarding");
+     if (enableIPv4)
+         ret = sysctlbyname("net.inet.ip.forwarding", NULL, 0,
+                            &enabled, sizeof(enabled));
+     if (enableIPv6 && ret == 0)
+         ret = sysctlbyname("net.inet6.ip6.forwarding", NULL, 0,
+                            &enabled, sizeof(enabled));
++#elif defined (__OpenBSD__)
++    int enabled = 1;
++        //virReportSystemError(errno, "here in OpenBSD trying to set forwarding");
++    if (enableIPv4) {
++	int forwarding_mib[4] = { CTL_NET, PF_INET, 0, IPCTL_FORWARDING};
++        ret = (sysctl(forwarding_mib, 4, NULL, NULL, &enabled, sizeof(enabled)));
++        virReportSystemError(errno, "here in OpenBSD trying to set IPv4 forwarding: ret %d", ret);
++    }
++    if (enableIPv6) {
++	int forwarding_mib[4] = { CTL_NET, PF_INET6, 41, IPV6CTL_FORWARDING};
++        ret = (sysctl(forwarding_mib, 4, NULL, NULL, &enabled, sizeof(enabled)));
++        virReportSystemError(errno, "here in OpenBSD trying to set IPv6 forwarding: ret %d", ret);
++    }
+ #else
++        virReportSystemError(errno, "here in ELSE trying to set forwarding");
+     if (enableIPv4)
+         ret = virFileWriteStr("/proc/sys/net/ipv4/ip_forward", "1\n", 0);
+     if (enableIPv6 && ret == 0)
+         ret = virFileWriteStr("/proc/sys/net/ipv6/conf/all/forwarding", "1\n", 0);
+ #endif
++    sleep(5);
+     return ret;
+ }
+ 
+@@ -2781,7 +2797,7 @@ networkFindUnusedBridgeName(virNetworkObjListPtr nets,
+ 
+     int ret = -1, id = 0;
+     char *newname = NULL;
+-    const char *templ = "virbr%d";
++    const char *templ = "bridge%d";
+     const char *p;
+ 
+     if (def->bridge &&

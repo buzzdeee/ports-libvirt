@@ -1,0 +1,196 @@
+$OpenBSD$
+
+Enable bridge creation and management on OpenBSD.
+
+--- src/util/virnetdevbridge.c.orig	Thu Jun 25 16:00:33 2015
++++ src/util/virnetdevbridge.c	Fri Jul 17 07:39:15 2015
+@@ -72,6 +72,11 @@
+ # include <net/if_bridgevar.h>
+ #endif
+ 
++#if defined(SIOCBRDGADD)
++# include <netinet/if_ether.h>
++# include <net/if_bridge.h>
++#endif
++
+ #define VIR_FROM_THIS VIR_FROM_NONE
+ 
+ 
+@@ -515,6 +520,51 @@ int virNetDevBridgeCreate(const char *brname)
+     VIR_FORCE_CLOSE(s);
+     return ret;
+ }
++#elif defined(HAVE_STRUCT_IFREQ) && defined(SIOCIFCREATE)
++int virNetDevBridgeCreate(char *brname)
++{
++    int s;
++    struct ifreq ifr;
++    int ret = - 1;
++    int unit = 0;
++    char tmpname[IFNAMSIZ];
++
++    ret = snprintf(tmpname, IFNAMSIZ, "bridge%d", unit);
++    if (ret == -1 || ret >= IFNAMSIZ)
++        goto cleanup;
++
++    while ( unit < INT_MAX ) {
++
++      if ((s = virNetDevSetupControl(tmpname, &ifr)) < 0)
++          return -1;
++    
++      if (virNetDevExists(tmpname) == 1) {
++        unit++;
++        ret = snprintf(tmpname, IFNAMSIZ, "bridge%d", unit);
++        if (ret == -1 || ret >= IFNAMSIZ)
++          goto cleanup;
++        continue;
++      }
++
++      //s = socket(AF_INET, SOCK_DGRAM, 0);
++      ret = ioctl(s, SIOCIFCREATE, &ifr);
++      if (ret < 0) {
++        virReportSystemError(errno, "%s", _("Unable to create bridge device"));
++        goto cleanup;
++      } else {
++        ret = snprintf(brname, IFNAMSIZ, "bridge%d", unit);
++        if (ret == -1 || ret >= IFNAMSIZ)
++          goto cleanup;
++	break;
++      }
++        
++    }
++
++    ret = 0;
++ cleanup:
++    VIR_FORCE_CLOSE(s);
++    return ret;
++}
+ #else
+ int virNetDevBridgeCreate(const char *brname)
+ {
+@@ -651,6 +701,38 @@ int virNetDevBridgeAddPort(const char *brname,
+ 
+     return 0;
+ }
++#elif defined(SIOCBRDGADD) 
++int virNetDevBridgeAddPort(const char *brname,
++                           const char *ifname)
++{
++    struct ifbreq req;
++    int s, ret;
++
++    memset(&req, 0, sizeof(req));
++    if (virStrcpyStatic(req.ifbr_ifsname, ifname) == NULL) {
++        virReportSystemError(ERANGE,
++                             _("Network interface name '%s' is too long"),
++                             ifname);
++        return -1;
++    }
++    if (virStrcpyStatic(req.ifbr_name, brname) == NULL) {
++        virReportSystemError(ERANGE,
++                             _("Bridge name '%s' is too long"),
++                             brname);
++        return -1;
++    }
++
++
++    s = socket(AF_INET, SOCK_DGRAM, 0);
++    ret = ioctl(s, SIOCBRDGADD, &req);
++    if (ret < 0) {
++        virReportSystemError(errno,
++                             _("Unable to add bridge %s port %s"), brname, ifname);
++        return -1;
++    }
++
++    return 0;
++}
+ #else
+ int virNetDevBridgeAddPort(const char *brname,
+                            const char *ifname)
+@@ -891,10 +973,83 @@ int virNetDevBridgeSetSTP(const char *brname ATTRIBUTE
+ int virNetDevBridgeGetSTP(const char *brname,
+                           bool *enable ATTRIBUTE_UNUSED)
+ {
+-    virReportSystemError(ENOSYS,
+-                         _("Unable to get STP on %s on this platform"),
+-                         brname);
+     return -1;
++}
++#elif defined(__OpenBSD__)
++int virNetDevBridgeSetSTPDelay(const char *brname,
++                               int delay)
++{
++    int s, ret;
++    struct ifbrparam param;
++    u_long delay_seconds = delay / 1000;
++
++    delay_seconds = delay_seconds < 4 ? 4 : delay_seconds;
++    param.ifbrp_fwddelay = delay_seconds & 0xff;
++
++    if ((s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0) {
++        virReportSystemError(errno, "%s",
++                             _("Cannot open network interface control socket"));
++        return -1;
++    }
++
++    if (virStrcpyStatic(param.ifbrp_name, brname) == NULL) {
++       virReportSystemError(ERANGE,
++                            _("Network interface name '%s' is too long"),
++                            brname);
++       goto cleanup;
++    }
++
++    ret = ioctl(s, SIOCBRDGSFD, &param);
++
++  cleanup:
++    VIR_FORCE_CLOSE(s);
++
++    return 0;
++}
++int virNetDevBridgeGetSTPDelay(const char *brname,
++                               int *delay)
++{
++    int s, ret;
++    struct ifbrparam param;
++
++    if ((s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0) {
++        virReportSystemError(errno, "%s",
++                             _("Cannot open network interface control socket"));
++        return -1;
++    }
++    if (virStrcpyStatic(param.ifbrp_name, brname) == NULL) {
++       virReportSystemError(ERANGE,
++                            _("Network interface name '%s' is too long"),
++                            brname);
++       goto cleanup;
++    }
++
++    ret = ioctl(s, SIOCBRDGGFD, &param);
++    *delay = param.ifbrp_fwddelay;
++
++  cleanup:
++    VIR_FORCE_CLOSE(s);
++
++    return ret;
++
++}
++int virNetDevBridgeSetSTP(const char *brname ATTRIBUTE_UNUSED,
++                          bool enable ATTRIBUTE_UNUSED)
++
++{
++    /* OpenBSD doesn't allow to enable/disable STP per bridge,
++     * we could only switch between rstp (default) and stp */
++    return 0;
++}
++int virNetDevBridgeGetSTP(const char *brname ATTRIBUTE_UNUSED,
++                          bool *enable)
++{
++    /* we do have STP on the bridge all the time,
++     * we could only switch between RSTP and STP,
++     * therefore no need to check, just return true */
++
++    *enable = true;
++    return 0;
+ }
+ #else
+ int virNetDevBridgeSetSTPDelay(const char *brname,

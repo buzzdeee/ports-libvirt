@@ -8,6 +8,7 @@ DISTNAME=		libvirt-${VERSION}
 PKGNAME-main=		${DISTNAME}
 PKGNAME-server=		libvirt-server-${VERSION}
 CATEGORIES=		sysutils devel
+REVISION=		60
 
 SHARED_LIBS +=  virt-qemu                 0.3 # 1002.17
 SHARED_LIBS +=  virt                      0.7 # 1002.17
